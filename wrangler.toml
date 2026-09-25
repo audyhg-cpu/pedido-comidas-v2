@@ -1,0 +1,8 @@
+name = "pedido-comidas-v2"
+main = "worker.js"
+compatibility_date = "2026-09-24"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "pedido-comida-db"
+database_id = "124ec8ec-b84e-440f-8cbb-751e575b38b6"
