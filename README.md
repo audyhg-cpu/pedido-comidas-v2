@@ -25,3 +25,4 @@ Esta versión usa tablas `v2_*`, por lo que no mezcla los datos de prueba de la 
 
 ## Instalación
 Esta versión funciona como PWA instalable en Android y iPhone, con icono propio.
+actualizar...
