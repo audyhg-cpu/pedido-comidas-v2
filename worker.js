@@ -231,13 +231,31 @@ export default {
     return json({ok:true});
    }
 
-   const dm=path.match(/^\/api\/polls\/([^/]+)\/orders\/([^/]+)$/);\n   if(request.method==='DELETE'&&dm){\n    const token=request.headers.get('X-Admin-Token')||'';\n    const p=await env.DB.prepare('SELECT admin_token FROM v2_polls WHERE id=?').bind(dm[1]).first();\n    if(!p)return json({error:'Encuesta no encontrada.'},404);\n    if(token!==p.admin_token)return json({error:'Acceso de administrador inválido.'},403);\n    const finalized=await env.DB.prepare('SELECT poll_id FROM v2_finalized_polls WHERE poll_id=?').bind(dm[1]).first();\n    if(finalized)return json({error:'Este pedido ya fue finalizado y no admite cambios.'},409);\n    const row=await env.DB.prepare('SELECT id FROM v2_orders WHERE id=? AND poll_id=?').bind(dm[2],dm[1]).first();\n    if(!row)return json({error:'La persona ya no está en el pedido.'},404);\n    await env.DB.prepare('DELETE FROM v2_orders WHERE id=? AND poll_id=?').bind(dm[2],dm[1]).run();\n    return json({ok:true});\n   }\n\n   const rm=path.match(/^\/api\/polls\/([^/]+)\/results$/);
+   const dm=path.match(/^\/api\/polls\/([^/]+)\/orders\/([^/]+)$/);
+   if(request.method==='DELETE'&&dm){
+    const token=request.headers.get('X-Admin-Token')||'';
+    const p=await env.DB.prepare('SELECT admin_token FROM v2_polls WHERE id=?').bind(dm[1]).first();
+    if(!p)return json({error:'Encuesta no encontrada.'},404);
+    if(token!==p.admin_token)return json({error:'Acceso de administrador inválido.'},403);
+    const finalized=await env.DB.prepare('SELECT poll_id FROM v2_finalized_polls WHERE poll_id=?').bind(dm[1]).first();
+    if(finalized)return json({error:'Este pedido ya fue finalizado y no admite cambios.'},409);
+    const row=await env.DB.prepare('SELECT id FROM v2_orders WHERE id=? AND poll_id=?').bind(dm[2],dm[1]).first();
+    if(!row)return json({error:'La persona ya no está en el pedido.'},404);
+    await env.DB.prepare('DELETE FROM v2_orders WHERE id=? AND poll_id=?').bind(dm[2],dm[1]).run();
+    return json({ok:true});
+   }
+
+   const rm=path.match(/^\/api\/polls\/([^/]+)\/results$/);
    if(request.method==='GET'&&rm){
     const token=request.headers.get('X-Admin-Token')||'';
     const p=await env.DB.prepare('SELECT id,title,closes_at,admin_token FROM v2_polls WHERE id=?').bind(rm[1]).first();
     if(!p)return json({error:'Encuesta no encontrada.'},404);
     if(token!==p.admin_token)return json({error:'Acceso de administrador inválido.'},403);
-    const counts=await env.DB.prepare(`SELECT o.label,COUNT(r.id) count FROM v2_options o LEFT JOIN v2_orders r ON r.option_id=o.id WHERE o.poll_id=? GROUP BY o.id,o.label,o.sort_order ORDER BY o.sort_order`).bind(rm[1]).all();\n    const diners=await env.DB.prepare(`SELECT r.id,r.diner_name,o.label option_label,r.created_at FROM v2_orders r LEFT JOIN v2_options o ON o.id=r.option_id WHERE r.poll_id=? ORDER BY r.created_at,r.diner_name`).bind(rm[1]).all();\n    const cs=(counts.results||[]).map(x=>({label:x.label,count:Number(x.count||0)}));\n    const ds=(diners.results||[]).map(x=>({id:x.id,name:x.diner_name,optionLabel:x.option_label||''}));\n    return json({title:p.title,closesAt:p.closes_at,closed:Date.now()>=new Date(p.closes_at).getTime(),counts:cs,total:cs.reduce((a,x)=>a+x.count,0),names:ds.map(x=>x.name),diners:ds});
+    const counts=await env.DB.prepare(`SELECT o.label,COUNT(r.id) count FROM v2_options o LEFT JOIN v2_orders r ON r.option_id=o.id WHERE o.poll_id=? GROUP BY o.id,o.label,o.sort_order ORDER BY o.sort_order`).bind(rm[1]).all();
+    const diners=await env.DB.prepare(`SELECT r.id,r.diner_name,o.label option_label,r.created_at FROM v2_orders r LEFT JOIN v2_options o ON o.id=r.option_id WHERE r.poll_id=? ORDER BY r.created_at,r.diner_name`).bind(rm[1]).all();
+    const cs=(counts.results||[]).map(x=>({label:x.label,count:Number(x.count||0)}));
+    const ds=(diners.results||[]).map(x=>({id:x.id,name:x.diner_name,optionLabel:x.option_label||''}));
+    return json({title:p.title,closesAt:p.closes_at,closed:Date.now()>=new Date(p.closes_at).getTime(),counts:cs,total:cs.reduce((a,x)=>a+x.count,0),names:ds.map(x=>x.name),diners:ds});
    }
 
    return json({error:'No encontrado'},404);
